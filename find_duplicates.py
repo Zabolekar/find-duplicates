@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from os import walk, path, stat
+import os
 from sys import argv
-dir = argv[1]
+dir = argv[1].rstrip(os.sep)
 min_size = int(argv[2])
 
 def add_sizes_to_files(where, files):
     for file in sorted(files):
-        size = stat(path.join(where, file)).st_size
+        size = os.stat(os.path.join(where, file)).st_size
         yield file, size
 
 class Candidate:
@@ -17,9 +17,29 @@ class Candidate:
         self.size = sum(size for _, size in self.files_with_sizes)
 
 def candidates():
-    for where, dirs, files in walk(dir):
+    for where, dirs, files in os.walk(dir):
         if files:
             yield Candidate(where, files)
+
+def print_nice_result(paths: list[str]) -> None:
+    assert len(paths) > 1
+    common_prefix = dir + os.sep
+    split_paths = []
+    for path in paths:
+        assert path.startswith(common_prefix)
+        split_paths.append(path[len(common_prefix):].split(os.sep))
+    upper_bound = min(len(path) for path in split_paths)
+    for suffix_length in range(upper_bound):
+        index = - 1 - suffix_length
+        unique_names = { path[- 1 - suffix_length] for path in split_paths }
+        if len(unique_names) > 1:
+            break
+    common_suffix = os.path.join(*split_paths[0][-suffix_length:])
+    print(common_suffix)
+    for path in split_paths:
+        path_section = os.path.join(*path[:-suffix_length])
+        print(f"- {path_section}")
+
 
 files_where = dict()
 for candidate in candidates():
@@ -40,6 +60,7 @@ for candidate in candidates():
     else:
         files_where[files] = [where]
 
-for where in files_where.values():
-    if len(where) > 1:
-        print(where)
+
+for paths in files_where.values():
+    if len(paths) > 1:
+        print_nice_result(paths)
