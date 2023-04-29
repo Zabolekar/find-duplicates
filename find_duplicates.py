@@ -1,9 +1,25 @@
 #!/usr/bin/env python
 
 import os
+import re
 from sys import argv
+
 dir = argv[1].rstrip(os.sep)
-min_size = int(argv[2])
+
+def parse_size(s: str) -> int:
+    ok = re.match("^(\d+)(\w?)$", s)
+    if not ok:
+        raise ValueError(f"{s} is not a valid minimum size")
+    count, suffix = ok.groups()
+    powers = dict(K=1024, M=1024**2, G=1024**3)
+    try:
+        return int(count) * powers[suffix]
+    except KeyError:
+        valid_suffixes = ', '.join(powers.keys())
+        message = f"valid suffixes are {valid_suffixes}; got {suffix}"
+        raise ValueError(message) from None
+
+min_size = parse_size(argv[2])
 
 def add_sizes_to_files(where, files):
     for file in sorted(files):
